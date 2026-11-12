@@ -1,9 +1,15 @@
+import { useCallback } from 'react';
+import { getJson } from '../api/client.js';
 import { useApiResource } from '../hooks/useApiResource.js';
 
 type Team = { name: string; mascot?: string; members?: unknown[] };
 
 export default function Teams() {
-  const { data, error, loading } = useApiResource<{ teams: Team[] }>('/api/teams');
+  const loadTeams = useCallback(
+    () => getJson<{ teams: Team[] }>('/api/teams'),
+    [],
+  );
+  const { data, error, loading } = useApiResource(loadTeams);
   return (
     <section>
       <h2>Teams</h2>

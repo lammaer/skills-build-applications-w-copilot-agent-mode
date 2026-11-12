@@ -1,10 +1,15 @@
+import { useCallback } from 'react';
+import { getJson } from '../api/client.js';
 import { useApiResource } from '../hooks/useApiResource.js';
 
 type Workout = { title: string; focus?: string; minutes?: number; difficulty?: string; reason?: string };
 
 export default function Workouts() {
-  const path = `/api/workouts/suggestions/${encodeURIComponent('mona@example.com')}`;
-  const { data, error, loading } = useApiResource<{ suggestions: Workout[] }>(path);
+  const loadSuggestions = useCallback(
+    () => getJson<{ suggestions: Workout[] }>(`/api/workouts/suggestions/${encodeURIComponent('mona@example.com')}`),
+    [],
+  );
+  const { data, error, loading } = useApiResource(loadSuggestions);
   return (
     <section>
       <h2>Workout suggestions</h2>
