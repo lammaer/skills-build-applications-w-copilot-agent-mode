@@ -73,6 +73,7 @@ export async function createTeam(input: unknown) {
 
   const team = await Team.create({ name, mascot, members: uniqueMemberIds });
   if (uniqueMemberIds.length > 0) {
+    // Keep the member arrays aligned with each user's single team reference.
     await Team.updateMany(
       { _id: { $ne: team._id }, members: { $in: uniqueMemberIds } },
       { $pull: { members: { $in: uniqueMemberIds } } },
