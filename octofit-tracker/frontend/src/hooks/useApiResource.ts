@@ -23,6 +23,7 @@ export function useApiResource<T>(path: string): ResourceState<T> {
         });
       }
     });
+    // Ignore responses after unmount or when the requested resource changes.
     return () => {
       active = false;
     };
