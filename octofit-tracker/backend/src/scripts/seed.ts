@@ -1,7 +1,7 @@
 import { connectDatabase, disconnectDatabase } from '../config/database.js';
 import { Activity, Team, User, Workout } from '../models/index.js';
 
-// Seed stable demo records without clearing data owned by the application.
+// Keep demo fixtures stable across reruns without deleting application-owned records.
 async function upsertDemoUser(name: string, email: string, teamId: InstanceType<typeof Team>['_id'], fitnessGoal: string) {
   const previousUser = await User.findOne({ email }).select('_id team');
   if (previousUser?.team && previousUser.team.toString() !== teamId.toString()) {
