@@ -20,8 +20,8 @@ export async function listActivities() {
 export async function createActivity(input: unknown) {
   if (!isRecord(input)) throw httpError('Activity details are required', 400);
 
-  const userId = requiredText(input.userId);
-  const teamId = requiredText(input.teamId);
+  const userId = requiredText(input.userId).toLowerCase();
+  const teamId = requiredText(input.teamId).toLowerCase();
   const type = requiredText(input.type);
   const minutes = input.minutes;
   if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(teamId)) {
@@ -32,10 +32,11 @@ export async function createActivity(input: unknown) {
   }
 
   const [user, team] = await Promise.all([
-    User.exists({ _id: userId }),
+    User.findById(userId).select('team').lean(),
     Team.exists({ _id: teamId }),
   ]);
   if (!user || !team) throw httpError('The specified user or team does not exist', 404);
+  if (user.team?.toString() !== teamId) throw httpError('The user does not belong to the specified team', 409);
 
   return Activity.create({
     user: userId,
@@ -64,15 +65,27 @@ export async function createTeam(input: unknown) {
     if (typeof member !== 'string' || !Types.ObjectId.isValid(member.trim())) {
       throw httpError('Team members must be valid user IDs', 400);
     }
-    return member.trim();
+    return member.trim().toLowerCase();
   });
   const uniqueMemberIds = [...new Set(memberIds)];
+  const existingMembers = await User.countDocuments({ _id: { $in: uniqueMemberIds } });
+  if (existingMembers !== uniqueMemberIds.length) throw httpError('One or more team members do not exist', 404);
+
+  const team = await Team.create({ name, mascot, members: uniqueMemberIds });
   if (uniqueMemberIds.length > 0) {
-    const existingMembers = await User.countDocuments({ _id: { $in: uniqueMemberIds } });
-    if (existingMembers !== uniqueMemberIds.length) throw httpError('One or more team members do not exist', 404);
+    await Team.updateMany(
+      { _id: { $ne: team._id }, members: { $in: uniqueMemberIds } },
+      { $pull: { members: { $in: uniqueMemberIds } } },
+      { runValidators: true },
+    );
+    await User.updateMany(
+      { _id: { $in: uniqueMemberIds } },
+      { $set: { team: team._id } },
+      { runValidators: true },
+    );
   }
 
-  return Team.create({ name, mascot, members: uniqueMemberIds });
+  return team;
 }
 
 export async function getLeaderboard() {
